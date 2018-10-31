@@ -17,8 +17,6 @@ import csv
 import os
 import time
 
-MYO = MyoRaw(None)
-
 # Glove's USB identifiers
 USB_VENDOR = 0x5d70
 L_iD = 0x0011

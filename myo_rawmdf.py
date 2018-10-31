@@ -211,11 +211,11 @@ class MyoRaw(object):
         self.bt.disconnect(2)
 
         ## start scanning
-        print('scanning...')
+        print("[MYO]: scanning...")
         self.bt.discover()
         while True:
             p = self.bt.recv_packet()
-            print('scan response:', p)
+            print('[MYO]: scan response:', p)
 
             if p.payload.endswith(b'\x06\x42\x48\x12\x4A\x7F\x2C\x48\x47\xB9\xDE\x04\xA9\x01\x00\x06\xD5'):
                 addr = list(multiord(p.payload[2:8]))
@@ -230,7 +230,7 @@ class MyoRaw(object):
         ## get firmware version
         fw = self.read_attr(0x17)
         _, _, _, _, v0, v1, v2, v3 = unpack('BHBBHHHH', fw.payload)
-        print('firmware version: %d.%d.%d.%d' % (v0, v1, v2, v3))
+        print('[MYO]: firmware version: %d.%d.%d.%d' % (v0, v1, v2, v3))
 
         self.old = (v0 == 0)
 
@@ -265,7 +265,7 @@ class MyoRaw(object):
 
         else:
             name = self.read_attr(0x03)
-            print('device name: %s' % name.payload)
+            print('[MYO]: device name: %s' % name.payload)
 
             ## enable IMU data
             self.write_attr(0x1d, b'\x01\x00')
@@ -306,7 +306,7 @@ class MyoRaw(object):
                 elif typ == 3: # pose
                     self.on_pose(Pose(val))
             else:
-                print('data with unknown attr: %02X %s' % (attr, p))
+                print('[MYO]: data with unknown attr: %02X %s' % (attr, p))
 
         self.bt.add_handler(handle_data)
 
