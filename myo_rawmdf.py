@@ -453,7 +453,7 @@ if __name__ == '__main__':
             ## update pygame display
             plot(scr, [e / 2000. for e in emg])
         else:
-            #print(emg)
+            print(emg)
             with open('Data.csv', 'a') as Datacsv:                
                 datawriter = csv.writer(Datacsv, delimiter=',')
                 datawriter.writerow(emg)
@@ -463,11 +463,7 @@ if __name__ == '__main__':
             #print((len(times) - 1) / (times[-1] - times[0]))
             times.pop(0)
 
-    def print_emg(emg, moving, times = []):
-        print("emg rec")
-   
     m.add_emg_handler(proc_emg)
-    m.add_emg_handler(print_emg)
     m.connect()
 
     m.add_arm_handler(lambda arm, xdir: print('arm', arm, 'xdir', xdir))
