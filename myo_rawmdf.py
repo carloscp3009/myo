@@ -8,7 +8,6 @@
 
 
 from __future__ import print_function
-
 import enum
 import re
 import struct
@@ -463,8 +462,12 @@ if __name__ == '__main__':
         if len(times) > 20:
             #print((len(times) - 1) / (times[-1] - times[0]))
             times.pop(0)
+
+    def print_emg(emg, moving, times = []):
+        print("emg rec")
    
     m.add_emg_handler(proc_emg)
+    m.add_emg_handler(print_emg)
     m.connect()
 
     m.add_arm_handler(lambda arm, xdir: print('arm', arm, 'xdir', xdir))
