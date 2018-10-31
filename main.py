@@ -12,27 +12,6 @@ stop = False
 user = None
 
 
-def myo_worker():
-    global stop, label
-    myo = MyoRaw(None)
-
-    def log_emg(emg, a=None, b=None):
-        global n
-        print "[MYO]: " + emg
-        save_arr_file(emg, 'emg_data.txt')
-        n += 1
-
-        if (n == 10):
-            n = 0
-            stop = True
-
-    myo.add_emg_handler(log_emg)
-    myo.connect()
-
-    while not stop:
-        myo.run(1)
-
-
 def glove_worker():
     global label, user, stop
     hand = u"L"
@@ -77,8 +56,10 @@ def main():
 
 class Job(threading.Thread):
 
-    def __init__(self):
+    def __init__(self, name):
         threading.Thread.__init__(self)
+
+        self.setName(name)
 
         # The shutdown_flag is a threading.Event object that
         # indicates whether the thread should be terminated.
@@ -87,31 +68,44 @@ class Job(threading.Thread):
         # ... Other thread setup code here ...
 
     def run(self):
-        print('Thread #%s started' % self.ident)
+        print('[THREAD] #%s started \n' % self.name)
 
         while not self.shutdown_flag.is_set():
             # ... Job code here ...
+            print self.name
             time.sleep(0.5)
 
         # ... Clean shutdown code here ...
-        print('Thread #%s stopped' % self.ident)
 
     def stop(self):
         self.shutdown_flag.set()
         self.join()
+        print('[THREAD] #%s stopped \n' % self.name)
 
 
 class ServiceExit(Exception):
-    """
-    Custom exception which is used to trigger the clean exit
-    of all running threads and the main program.
-    """
     pass
 
 
 def service_shutdown(signum, frame):
     print('Caught signal %d' % signum)
     raise ServiceExit
+
+
+class MyoJob(Job):
+    def __init__(self, name):
+        Job.__init__(self, name)
+
+        self.myo = MyoRaw(None)
+        self.myo.add_emg_handler(self.log_emg)
+        self.myo.connect()
+
+    def log_emg(self, emg):
+        print "[MYO]: " + emg
+        save_arr_file(emg, 'emg_data.txt')
+
+    def run(self):
+        print self.myo.arm_handlers
 
 
 def main_test():
@@ -124,8 +118,11 @@ def main_test():
 
     # Start the job threads
     try:
-        j1 = Job()
-        j1.start()
+        # j1 = Job('hola we')
+        # j1.start()
+
+        mj = MyoJob('haeh')
+        mj.start()
 
         i = 0
         # Keep the main thread running, otherwise signals are ignored.
@@ -133,16 +130,11 @@ def main_test():
             i += 1
             time.sleep(0.5)
 
-        j1.stop()
+        mj.stop()
 
     except ServiceExit:
         # Terminate the running threads.
-        # Set the shutdown flag on each thread to trigger a clean shutdown of each thread.
-        j1.shutdown_flag.set()
-        # j2.shutdown_flag.set()
-        # Wait for the threads to close...
-        j1.join()
-        # j2.join()
+        mj.stop()
 
     print('Exiting main program')
 
