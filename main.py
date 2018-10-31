@@ -7,9 +7,10 @@ import signal
 import time
 
 n = 0
-label = None
-stop = False
-user = None
+LABEL = None
+STOP = False
+USER = None
+DATA_N = 10
 
 
 def glove_worker():
@@ -26,61 +27,33 @@ def glove_worker():
     return
 
 
-def main():
-    global user, label, stop
-    user = raw_input(u"Type the name of the user and press ENTER: ")
-
-    myo_thread = Thread(target=myo_worker)
-    glove_thread = Thread(target=glove_worker)
-    # myo_thread.setDaemon(True)
-
-    raw_input(u"Press ENTER to START")
-    glove_thread.start()
-    myo_thread.start()
-
-    while not stop:
-        os.system(u"clear")
-        print u"1.index"
-        print u"write 'exit' to close"
-        label = raw_input(u"Chosen label: ")
-
-        print label
-
-        if label == u"exit":
-            # glove_thread.
-            # myo_worker = None
-            stop = True
-
-    return
-
-
 class Job(threading.Thread):
 
     def __init__(self, name):
         threading.Thread.__init__(self)
-
         self.setName(name)
-
-        # The shutdown_flag is a threading.Event object that
-        # indicates whether the thread should be terminated.
         self.shutdown_flag = threading.Event()
 
         # ... Other thread setup code here ...
 
     def run(self):
-        print('[THREAD] #%s started \n' % self.name)
+        self.print_message(u'%s started ' % self.name)
 
         while not self.shutdown_flag.is_set():
+            pass
             # ... Job code here ...
-            print self.name
-            time.sleep(0.5)
+            # self.print_message(self.name)
+            # time.sleep(0.5)
 
-        # ... Clean shutdown code here ...
+            # ... Clean shutdown code here ...
 
     def stop(self):
         self.shutdown_flag.set()
         self.join()
-        print('[THREAD] #%s stopped \n' % self.name)
+        self.print_message('%s stopped' % self.name)
+
+    def print_message(self, str):
+        print '[%s]: %s' % (self.name, str)
 
 
 class ServiceExit(Exception):
@@ -88,56 +61,80 @@ class ServiceExit(Exception):
 
 
 def service_shutdown(signum, frame):
-    print('Caught signal %d' % signum)
+    print('[service_shutdown]: Caught signal %d' % signum)
     raise ServiceExit
 
 
 class MyoJob(Job):
+    """Myo thread class
+    """
+
     def __init__(self, name):
         Job.__init__(self, name)
-
-        self.myo = MyoRaw(None)
-        self.myo.add_emg_handler(self.log_emg)
-        self.myo.connect()
-
-    def log_emg(self, emg):
-        print "[MYO]: " + emg
-        save_arr_file(emg, 'emg_data.txt')
-
-    def run(self):
-        print self.myo.arm_handlers
+        self.myo = None
 
 
-def main_test():
+class GloveJob(Job):
+    """Glove thread class
+    """
+
+    def __init__(self, name):
+        Job.__init__(self, name)
+        self.glove = None
+
+    def data_adquisition(self):
+        global user, label, stop
+        hand = u"L"
+
+
+def menu(myo, glove):
+
+    global DATA_N, LABEL
+
+    i = 0
+    while True:
+
+        i += 1
+
+        print "[MAIN] 1. index"
+        print "[MAIN] 0. exit"
+
+        LABEL = int(raw_input('Label: '))
+        os.system('clear')
+
+        if LABEL == 0:
+            # Stop the threads
+            myo.stop()
+            glove.stop()
+            return
+
+
+def main():
 
     # Register the signal handlers
     signal.signal(signal.SIGTERM, service_shutdown)
     signal.signal(signal.SIGINT, service_shutdown)
 
-    print('Starting main program')
+    print('[main]: Starting main program')
 
     # Start the job threads
     try:
-        # j1 = Job('hola we')
-        # j1.start()
+        myo = MyoJob('myo')  # Myo Thread
+        glove = GloveJob('glove')  # Glove Thread
 
-        mj = MyoJob('haeh')
-        mj.start()
+        # Start the threads
+        myo.start()
+        glove.start()
 
-        i = 0
-        # Keep the main thread running, otherwise signals are ignored.
-        while i < 10:
-            i += 1
-            time.sleep(0.5)
-
-        mj.stop()
+        # Menu
+        menu(myo, glove)
 
     except ServiceExit:
-        # Terminate the running threads.
-        mj.stop()
+        myo.stop()
+        glove.stop()
 
-    print('Exiting main program')
+    print('[main]: Exiting main program')
 
 
 if __name__ == '__main__':
-    main_test()
+    main()
