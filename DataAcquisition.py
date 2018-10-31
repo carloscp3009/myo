@@ -102,9 +102,9 @@ def main():
             return -1
     print(str(hand) + " glove connected!")
     print("")
-    user = input("Type the name of the user and press ENTER: ")
-    print("")
-    print("Please open and close your fingers several times during calibration")
+    user = str(raw_input(input("Type the name of the user and press ENTER: "))
+    
+    print ("Please open and close your fingers several times during calibration")
     input("Press ENTER to begin")
     print("Calibrating...")
     calibrate()
