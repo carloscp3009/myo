@@ -8,7 +8,6 @@ from __future__ import with_statement
 from __future__ import division
 
 from io import open
-from myo_rawmdf import MyoRaw
 from utils import save_data_file
 
 import usb.core as core
@@ -171,12 +170,3 @@ def main():
 
 if __name__ == u'__main__':
     main()
-
-    def p_emg(emg, a=None, b=[]):
-        print emg
-
-    MYO.add_emg_handler(p_emg)
-    MYO.connect()
-
-    while True:
-        MYO.run(1)
