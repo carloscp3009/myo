@@ -449,14 +449,11 @@ if __name__ == '__main__':
     m = MyoRaw(sys.argv[1] if len(sys.argv) >= 2 else None)
 
     def proc_emg(emg, moving, times=[]):
-        if HAVE_PYGAME:
-            ## update pygame display
-            plot(scr, [e / 2000. for e in emg])
-        else:
-            print(emg)
-            with open('Data.csv', 'a') as Datacsv:                
-                datawriter = csv.writer(Datacsv, delimiter=',')
-                datawriter.writerow(emg)
+       
+        print(emg)
+        with open('Data.csv', 'a') as Datacsv:                
+            datawriter = csv.writer(Datacsv, delimiter=',')
+            datawriter.writerow(emg)
         ## print framerate of received data
         times.append(time.time())
         if len(times) > 20:
@@ -472,16 +469,6 @@ if __name__ == '__main__':
     try:
         while True:
             m.run(1)
-
-            if HAVE_PYGAME:
-                for ev in pygame.event.get():
-                    if ev.type == QUIT or (ev.type == KEYDOWN and ev.unicode == 'q'):
-                        raise KeyboardInterrupt()
-                    elif ev.type == KEYDOWN:
-                        if K_1 <= ev.key <= K_3:
-                            m.vibrate(ev.key - K_0)
-                        if K_KP1 <= ev.key <= K_KP3:
-                            m.vibrate(ev.key - K_KP0)
 
     except KeyboardInterrupt:
         pass
