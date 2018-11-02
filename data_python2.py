@@ -74,7 +74,7 @@ def readRaw():
         Min = np.minimum(flex_raw, Min)
 
     except Exception as e:
-        print e.args
+        #  print e.args
         pass
 
 
@@ -92,82 +92,3 @@ def calibrate():
     for i in np.arange(400):
         readRaw()
         time.sleep(0.015)
-
-
-def main():
-    print u"Trying to connect to glove..."
-    # Try left glove then right
-    hand = u"L"
-    if openPort(USB_VENDOR, L_iD, USB_IF) is None:
-        hand = u"R"
-        if openPort(USB_VENDOR, R_iD, USB_IF) is None:
-            print u"Glove not found"
-            return -1
-    print unicode(hand) + u" glove connected!"
-    print u""
-    user = raw_input(u"Type the name of the user and press ENTER: ")
-    print u""
-    print u"Please open and close your fingers several times during calibration"
-    raw_input(u"Press ENTER to begin")
-    print u"Calibrating..."
-    calibrate()
-    print u"Done"
-    raw_input(u"Press ENTER to continue")
-    stop = 1
-    while stop != 0:
-        # os.system(u"clear")
-        print u"Write one of the following labels according to the hand gesture to record:"
-        print u"0.Thumb"
-        print u"1.index"
-        print u"2.middle"
-        print u"3.ring"
-        print u"4.pinky"
-        print u"5.clopen"
-        print u"6.grab"
-        print u"write 'test' to show data without saving"
-        print u"write 'exit' to close"
-        label = raw_input(u"Chosen label: ")
-        if label == u"exit":
-            stop = 0
-        elif label == u"test":
-            for i in np.arange(N_SAMPLES):
-                # Take a single sample
-                os.system(u"clear")
-                readCal()
-                row = flex_cal.tolist()
-                print unicode(row[4])
-        else:
-            os.system(u"clear")
-            raw_input(u"Press ENTER to begin collecting data for: " + label)
-            data_list = []
-            # Read samples
-            readCal()
-            print u"Collecting data... 0%..."
-            # Take N_SAMPLES samples
-            for i in np.arange(N_SAMPLES):
-                # Take a single sample and add gesture, hand and username labels
-                readCal()
-                row = flex_cal.tolist()
-                row.append(label)
-                row.append(hand)
-                row.append(user)
-
-                # Add new sample to the list
-                data_list.append(row[:])
-                time.sleep(0.015)
-                if i == int(N_SAMPLES*0.25):
-                    print u"Collecting data... 25%..."
-                elif i == int(N_SAMPLES*0.5):
-                    print u"Collecting data... 50%..."
-                elif i == int(N_SAMPLES*0.75):
-                    print u"Collecting data... 75%..."
-            print u"Collecting data... 100%..."
-            # Save samples to CSV file
-
-            save_data_file(data_list, 'data_file__')
-
-    closePort(USB_IF)
-
-
-if __name__ == u'__main__':
-    main()

@@ -74,8 +74,10 @@ def main(name, label, path):
             exit(-1)
 
     logging.info('Calibrando GLOVE')
+    time.sleep(0.5)
     calibrate()
 
+    logging.info('Conectando MYO')
     myo.add_emg_handler(myo_data_proc)
     myo.connect()
 
@@ -90,24 +92,44 @@ def main(name, label, path):
     glove_thread.join()
 
     logging.info('Guardando datos')
-    save_data_file(MYO_DATA, '%s/%s/myo_data' % (path, label))
-    save_data_file(GLOVE_DATA, '%s/%s/glove_data' % (path, label))
+    save_data_file(MYO_DATA, '%s/%s/%s/myo_data' % (path, name, label))
+    save_data_file(GLOVE_DATA, '%s/%s/%s/glove_data' % (path, name, label))
 
     logging.warn('Terminando programa principal')
 
 
 if __name__ == '__main__':
 
+    """El programa debe ser ejecutado vía consola. Así:
+
+        sudo python main.py <nombre> <label> <path>
+
+        <nombre>:   nombre de la persona
+        <label>:    nombre que recibirá el movimiento (index, ...)
+        <path>:     path de la carpeta donde se guardarán los datos
+
+        NOTA: Se crearán varias carpetas. Ejemplo:
+
+        sudo python main.py wilson index ./data
+
+        Se creará una carpeta 'data' en el directorio actual. Dentro de 'data' irá una carpeta
+        llamada 'wilson', y dentro de ésta otra carpeta llamada 'index'
+
+        ./data/wilson/index
+
+    """
+
     args = sys.argv
 
-    if len(args) < 4:
-        logging.error('Missing arguments')
+    if not len(args) == 4:
+        logging.error('Wrong arguments')
         exit()
-
-    print args
 
     name = args[1]
     label = args[2]
     path = args[3]
+
+    if not os.path.exists('%s/%s/%s' % (path, name, label)):
+        os.makedirs('%s/%s/%s' % (path, name, label))
 
     main(name, label, path)
