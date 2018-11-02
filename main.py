@@ -44,13 +44,26 @@ def glove_worker():
 
     readCal()
 
+    t0 = time.time()
+
+    i = 0
+    while i < N_DATA or time.time() < t0 + 1:
+
+        row = readCal()
+        # row = flex_cal.tolist()
+
+        GLOVE_DATA.append(row[:])
+        i += 1
+
+    """
     for i in np.arange(N_DATA):
         row = readCal()
         # row = flex_cal.tolist()
 
         GLOVE_DATA.append(row[:])
-        time.sleep(0.015)
+        time.sleep(0.0012)
         #  time.sleep(0.015)
+    """
 
     #  closePort(USB_IF)
 
