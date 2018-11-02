@@ -19,7 +19,7 @@ n = 0
 
 myo = MyoRaw(None)
 
-N_DATA = 100
+N_DATA = 1000
 MYO_COUNT = 0
 GLOVE_COUNT = 0
 
