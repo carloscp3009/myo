@@ -72,7 +72,9 @@ def readRaw():
         # Update maximum and minimum values as needed
         Max = np.maximum(flex_raw, Max)
         Min = np.minimum(flex_raw, Min)
-    except:
+
+    except Exception as e:
+        print e.args
         pass
 
 
@@ -82,10 +84,11 @@ def readCal():
     # Scale raw data with respect to current extreme values
     flex_cal = (flex_raw-Min)/(Max-Min)
 
-# Calibration routine to get good initial extreme values
+    return flex_cal
 
 
 def calibrate():
+    """Calibration routine to get good initial extreme values"""
     for i in np.arange(400):
         readRaw()
         time.sleep(0.015)

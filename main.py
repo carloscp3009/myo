@@ -2,199 +2,112 @@
 # -*- coding: utf-8 -*-
 
 from myo_rawmdf import MyoRaw
-from data_python2 import openPort, calibrate, readCal, readRaw, flex_cal, flex_raw
-from utils import save_arr_file
+from data_python2 import calibrate, closePort, readCal, readRaw, flex_cal, R_iD, USB_IF, L_iD, openPort, USB_VENDOR
+from utils import save_arr_file, save_data_file
 import os
 import time
 import signal
 import logging
 import threading
+import sys
 import numpy as np
 
-
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.DEBUG,
+                    format='[%(levelname)s] - %(threadName)s \t:: %(message)s')
 
 n = 0
-LABEL = None
-STOP = False
-USER = None
-DATA_N = 10
 
-MYO_READY = True
-GLOVE_READY = False
+myo = MyoRaw(None)
 
-GLOVE_END = False
+N_DATA = 100
+MYO_COUNT = 0
+GLOVE_COUNT = 0
+
+MYO_DATA = []
+GLOVE_DATA = []
+
+
+def myo_worker():
+    global myo, N_DATA, MYO_COUNT, MYO_DATA
+
+    logging.info('Iniciando lectura de MYO')
+    while MYO_COUNT < N_DATA:
+        myo.run(1)
+
+    myo.disconnect()
+    logging.info('MYO DONE')
 
 
 def glove_worker():
-    global label, user, stop
+    global GLOVE_DATA
+    logging.info('Iniciando lectura de GLOVE')
 
-    while not stop:
-        print hand
+    readCal()
 
-    return
+    for i in np.arange(N_DATA):
+        row = readCal()
+        # row = flex_cal.tolist()
 
+        GLOVE_DATA.append(row[:])
+        time.sleep(0.015)
+        #  time.sleep(0.015)
 
-class Job(threading.Thread):
+    #  closePort(USB_IF)
 
-    def __init__(self, name):
-        threading.Thread.__init__(self)
-        self.setName(name)
-        self.shutdown_flag = threading.Event()
-
-        # ... Other thread setup code here ...
-
-    def run(self):
-        self.print_message(u'%s started ' % self.name)
-
-        while not self.shutdown_flag.is_set():
-            pass
-            # self.print_message(self.name)
-
-            # ... Clean shutdown code here ...
-
-    def stop(self):
-        self.shutdown_flag.set()
-        self.join()
-        self.print_message('%s stopped' % self.name)
-
-    def print_message(self, str):
-        logging.info(str)
+    logging.info('GLOVE DONE')
 
 
-class ServiceExit(Exception):
-    pass
+def myo_data_proc(emg, a=None):
+    global MYO_COUNT, MYO_DATA
+    MYO_DATA.append(emg)
+    MYO_COUNT += 1
 
 
-def service_shutdown(signum, frame):
-    print('[service_shutdown]: Caught signal %d' % signum)
-    raise ServiceExit
+def main(name, label, path):
+    global myo, MYO_DATA
 
+    hand = u"L"
+    if openPort(USB_VENDOR, L_iD, USB_IF) is None:
+        hand = u"R"
+        if openPort(USB_VENDOR, R_iD, USB_IF) is None:
+            logging.error('Glove not found')
+            exit(-1)
 
-class MyoJob(Job):
-    """Myo thread class
-    """
+    logging.info('Calibrando GLOVE')
+    calibrate()
 
-    def __init__(self, name):
-        Job.__init__(self, name)
-        self.myo = None
+    myo.add_emg_handler(myo_data_proc)
+    myo.connect()
 
+    logging.info('Iniciando hilos')
+    myo_thread = threading.Thread(target=myo_worker, name='myo')
+    glove_thread = threading.Thread(target=glove_worker, name='glove')
 
-class GloveJob(Job):
-    """Glove thread class
-    """
+    myo_thread.start()
+    glove_thread.start()
 
-    def __init__(self, name, hand):
-        Job.__init__(self, name)
-        self.glove = None
-        self.hand = hand
+    myo_thread.join()
+    glove_thread.join()
 
-    def init_glove(self):
-        global GLOVE_READY
+    logging.info('Guardando datos')
+    save_data_file(MYO_DATA, '%s/%s/myo_data' % (path, label))
+    save_data_file(GLOVE_DATA, '%s/%s/glove_data' % (path, label))
 
-        self.print_message(
-            "[GLOVE]: " + unicode(self.hand) + u" glove connected!")
-        self.print_message("[GLOVE]: " + u"Calibrating...")
-        calibrate()
-        GLOVE_READY = True
-
-    def run(self):
-        global LABEL, DATA_N, USER, GLOVE_END
-        self.print_message(u'%s started ' % self.name)
-
-        while not self.shutdown_flag.is_set():
-            if not GLOVE_READY:
-                self.init_glove()
-
-            print LABEL
-
-            if LABEL == 1:
-                data = self.read_data(LABEL, USER, DATA_N, self.hand)
-                GLOVE_END = True
-
-    def read_data(self, label, user, n, hand):
-        data_list = []
-        readCal()
-        for i in np.arange(n):
-                # Take a single sample and add gesture, hand and username labels
-            readCal()
-            row = flex_cal.tolist()
-            row.append(label)
-            row.append(hand)
-            row.append(user)
-
-            # Add new sample to the list
-            data_list.append(row[:])
-            time.sleep(0.015)
-            if i == int(n*0.25):
-                print u"Collecting data... 25%..."
-            elif i == int(n*0.5):
-                print u"Collecting data... 50%..."
-            elif i == int(n*0.75):
-                print u"Collecting data... 75%..."
-
-        return data_list
-
-
-def menu(myo, glove):
-
-    global DATA_N, LABEL, USER, MYO_READY, GLOVE_READY, GLOVE_END
-
-    USER = raw_input('[MAIN]: Digite el nombre: ')
-
-    while True:
-
-        if not MYO_READY or not GLOVE_READY:
-            # print "Myo or Glove not ready..."
-            continue
-
-        print GLOVE_END
-
-        if GLOVE_END:
-            LABEL = -1
-
-        print "[MAIN] 1. index"
-        print "[MAIN] 0. exit"
-
-        LABEL = int(raw_input('[MAIN]: Digite el número '))
-        # os.system('clear')
-
-        if LABEL == 0:
-            # Stop the threads
-            myo.stop()
-            glove.stop()
-            break
-
-
-def main():
-
-    # Register the signal handlers
-    signal.signal(signal.SIGTERM, service_shutdown)
-    signal.signal(signal.SIGINT, service_shutdown)
-
-    logging.info('[main]: Iniciando programa principal')
-
-    # Start the job threads
-    try:
-        myo = MyoJob('myo')  # Myo Thread
-        glove = GloveJob('glove',  u"L")  # Glove Thread
-
-        # Start the threads
-        myo.start()
-        glove.start()
-
-        time.sleep(1)
-
-        # Menu
-        menu(myo, glove)
-
-    except Exception as e:
-        logging.error(e.message)
-        myo.stop()
-        glove.stop()
-
-    logging.info('[main]: Saliendo del programa principal')
+    logging.warn('Terminando programa principal')
 
 
 if __name__ == '__main__':
-    main()
+
+    args = sys.argv
+
+    if len(args) < 4:
+        logging.error('Missing arguments')
+        exit()
+
+    print args
+
+    name = args[1]
+    label = args[2]
+    path = args[3]
+
+    main(name, label, path)
