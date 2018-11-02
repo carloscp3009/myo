@@ -1,143 +1,135 @@
-import threading
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
 from myo_rawmdf import MyoRaw
-from data_python2 import openPort, calibrate
-from utils import save_arr_file
+from data_python2 import calibrate, closePort, readCal, readRaw, flex_cal, R_iD, USB_IF, L_iD, openPort, USB_VENDOR
+from utils import save_arr_file, save_data_file
 import os
-import signal
 import time
+import signal
+import logging
+import threading
+import sys
+import numpy as np
+
+logging.basicConfig(level=logging.DEBUG,
+                    format='[%(levelname)s] - %(threadName)s \t:: %(message)s')
 
 n = 0
-label = None
-stop = False
-user = None
+
+myo = MyoRaw(None)
+
+N_DATA = 1000
+MYO_COUNT = 0
+GLOVE_COUNT = 0
+
+MYO_DATA = []
+GLOVE_DATA = []
+
+
+def myo_worker():
+    global myo, N_DATA, MYO_COUNT, MYO_DATA
+
+    logging.info('Iniciando lectura de MYO')
+    while MYO_COUNT < N_DATA:
+        myo.run(1)
+
+    myo.disconnect()
+    logging.info('MYO DONE')
 
 
 def glove_worker():
-    global label, user, stop
-    hand = u"R"
+    global GLOVE_DATA
+    logging.info('Iniciando lectura de GLOVE')
 
-    print "[GLOVE]: " + unicode(hand) + u" glove connected!"
-    print "[GLOVE]: " + u"Calibrating..."
+    readCal()
+
+    for i in np.arange(N_DATA):
+        row = readCal()
+        # row = flex_cal.tolist()
+
+        GLOVE_DATA.append(row[:])
+        time.sleep(0.015)
+        #  time.sleep(0.015)
+
+    #  closePort(USB_IF)
+
+    logging.info('GLOVE DONE')
+
+
+def myo_data_proc(emg, a=None):
+    global MYO_COUNT, MYO_DATA
+    MYO_DATA.append(emg)
+    MYO_COUNT += 1
+
+
+def main(name, label, path):
+    global myo, MYO_DATA
+
+    hand = u"L"
+    if openPort(USB_VENDOR, L_iD, USB_IF) is None:
+        hand = u"R"
+        if openPort(USB_VENDOR, R_iD, USB_IF) is None:
+            logging.error('Glove not found')
+            exit(-1)
+
+    logging.info('Calibrando GLOVE')
+    time.sleep(0.5)
     calibrate()
 
-    while not stop:
-        print hand
+    logging.info('Conectando MYO')
+    myo.add_emg_handler(myo_data_proc)
+    myo.connect()
 
-    return
+    logging.info('Iniciando hilos')
+    myo_thread = threading.Thread(target=myo_worker, name='myo')
+    glove_thread = threading.Thread(target=glove_worker, name='glove')
 
-
-def main():
-    global user, label, stop
-    user = raw_input(u"Type the name of the user and press ENTER: ")
-
-    myo_thread = Thread(target=myo_worker)
-    glove_thread = Thread(target=glove_worker)
-    # myo_thread.setDaemon(True)
-
-    raw_input(u"Press ENTER to START")
-    glove_thread.start()
     myo_thread.start()
+    glove_thread.start()
 
-    while not stop:
-        os.system(u"clear")
-        print u"1.index"
-        print u"write 'exit' to close"
-        label = raw_input(u"Chosen label: ")
+    myo_thread.join()
+    glove_thread.join()
 
-        print label
+    logging.info('Guardando datos')
+    save_data_file(MYO_DATA, '%s/%s/%s/myo_data' % (path, name, label))
+    save_data_file(GLOVE_DATA, '%s/%s/%s/glove_data' % (path, name, label))
 
-        if label == u"exit":
-            # glove_thread.
-            # myo_worker = None
-            stop = True
-
-    return
-
-
-class Job(threading.Thread):
-
-    def __init__(self, name):
-        threading.Thread.__init__(self)
-
-        self.setName(name)
-
-        # The shutdown_flag is a threading.Event object that
-        # indicates whether the thread should be terminated.
-        self.shutdown_flag = threading.Event()
-
-        # ... Other thread setup code here ...
-
-    def run(self):
-        print('[THREAD] #%s started \n' % self.name)
-
-        while not self.shutdown_flag.is_set():
-            # ... Job code here ...
-            print self.name
-            time.sleep(0.5)
-
-        # ... Clean shutdown code here ...
-
-    def stop(self):
-        self.shutdown_flag.set()
-        self.join()
-        print('[THREAD] #%s stopped \n' % self.name)
-
-
-class ServiceExit(Exception):
-    pass
-
-
-def service_shutdown(signum, frame):
-    print('Caught signal %d' % signum)
-    raise ServiceExit
-
-
-class MyoJob(Job):
-    def __init__(self, name):
-        Job.__init__(self, name)
-
-        self.myo = MyoRaw(None)
-        self.myo.add_emg_handler(self.log_emg)
-        self.myo.connect()
-
-    def log_emg(self, emg):
-        print "[MYO]: " + emg
-        save_arr_file(emg, 'emg_data.txt')
-
-    def run(self):
-        print self.myo.arm_handlers
-
-
-def main_test():
-
-    # Register the signal handlers
-    signal.signal(signal.SIGTERM, service_shutdown)
-    signal.signal(signal.SIGINT, service_shutdown)
-
-    print('Starting main program')
-
-    # Start the job threads
-    try:
-        # j1 = Job('hola we')
-        # j1.start()
-
-        mj = MyoJob('haeh')
-        mj.start()
-
-        i = 0
-        # Keep the main thread running, otherwise signals are ignored.
-        while i < 10:
-            i += 1
-            time.sleep(0.5)
-
-        mj.stop()
-
-    except ServiceExit:
-        # Terminate the running threads.
-        mj.stop()
-
-    print('Exiting main program')
+    logging.warn('Terminando programa principal')
 
 
 if __name__ == '__main__':
-    main_test()
+
+    """El programa debe ser ejecutado vía consola. Así:
+
+        sudo python main.py <nombre> <label> <path>
+
+        <nombre>:   nombre de la persona
+        <label>:    nombre que recibirá el movimiento (index, ...)
+        <path>:     path de la carpeta donde se guardarán los datos
+
+        NOTA: Se crearán varias carpetas. Ejemplo:
+
+        sudo python main.py wilson index ./data
+
+        Se creará una carpeta 'data' en el directorio actual. Dentro de 'data' irá una carpeta
+        llamada 'wilson', y dentro de ésta otra carpeta llamada 'index'
+
+        ./data/wilson/index
+
+    """
+
+    args = sys.argv
+
+    if not len(args) == 4:
+        logging.error('Wrong arguments')
+        exit()
+
+    name = args[1]
+    label = args[2]
+    path = args[3]
+
+    if not os.path.exists('%s/%s/%s' % (path, name, label)):
+        os.makedirs('%s/%s/%s' % (path, name, label))
+
+    main(name, label, path)
