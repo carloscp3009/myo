@@ -14,7 +14,7 @@ user = None
 
 def glove_worker():
     global label, user, stop
-    hand = u"L"
+    hand = u"R"
 
     print "[GLOVE]: " + unicode(hand) + u" glove connected!"
     print "[GLOVE]: " + u"Calibrating..."
