@@ -28,6 +28,11 @@ data_y = np.loadtxt(input_file_y, delimiter=',')
 
 X, y = data_X[:], data_y[:]
 
+# [[0.11127492 0.20970284]]
+
+
+print(y)
+
 num_training = int(0.9999 * len(X))
 num_test = len(X) - num_training
 

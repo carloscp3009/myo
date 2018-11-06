@@ -19,19 +19,20 @@ n = 0
 
 myo = MyoRaw(None)
 
-N_DATA = 1000
+N_DATA = 10000
 MYO_COUNT = 0
 GLOVE_COUNT = 0
+GLOVE_DONE = False
 
 MYO_DATA = []
 GLOVE_DATA = []
 
 
 def myo_worker():
-    global myo, N_DATA, MYO_COUNT, MYO_DATA
+    global myo, N_DATA, MYO_COUNT, MYO_DATA, GLOVE_DONE
 
     logging.info('Iniciando lectura de MYO')
-    while MYO_COUNT < N_DATA:
+    while MYO_COUNT < N_DATA and not GLOVE_DONE:
         myo.run(1)
 
     myo.disconnect()
@@ -39,7 +40,7 @@ def myo_worker():
 
 
 def glove_worker():
-    global GLOVE_DATA
+    global GLOVE_DATA, GLOVE_DONE
     logging.info('Iniciando lectura de GLOVE')
 
     readCal()
@@ -52,27 +53,18 @@ def glove_worker():
         row = readCal()
         # row = flex_cal.tolist()
 
-        GLOVE_DATA.append(row[:])
+        GLOVE_DATA.append([ time.time(), row[:] ])
         i += 1
-
-    """
-    for i in np.arange(N_DATA):
-        row = readCal()
-        # row = flex_cal.tolist()
-
-        GLOVE_DATA.append(row[:])
-        time.sleep(0.0012)
-        #  time.sleep(0.015)
-    """
-
     #  closePort(USB_IF)
 
+    GLOVE_DONE = True
     logging.info('GLOVE DONE')
 
 
 def myo_data_proc(emg, a=None):
     global MYO_COUNT, MYO_DATA
-    MYO_DATA.append(emg)
+
+    MYO_DATA.append([ time.time(), emg ])
     MYO_COUNT += 1
 
 
@@ -101,12 +93,14 @@ def main(name, label, path):
     myo_thread.start()
     glove_thread.start()
 
-    myo_thread.join()
     glove_thread.join()
+    save_data_file(GLOVE_DATA, '%s/%s/%s/glove_data' % (path, name, label))
+
+    myo_thread.join()
 
     logging.info('Guardando datos')
     save_data_file(MYO_DATA, '%s/%s/%s/myo_data' % (path, name, label))
-    save_data_file(GLOVE_DATA, '%s/%s/%s/glove_data' % (path, name, label))
+    
 
     logging.warn('Terminando programa principal')
 

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""
+"""
 Created on Wed Jul 18 19:45:06 2018
 
 @author: winston 
@@ -91,4 +91,4 @@ def calibrate():
     """Calibration routine to get good initial extreme values"""
     for i in np.arange(400):
         readRaw()
-        time.sleep(0.015)
+        time.sleep(SLEEP_TIME)
