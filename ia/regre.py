@@ -27,7 +27,7 @@ data_y = np.loadtxt(input_file_y, delimiter=',')
 
 X, y = data_X[:], data_y[:]
 
-num_training = int(0.9999 * len(X))
+num_training = int(0.999 * len(X))
 num_test = len(X) - num_training
 
 X_train, y_train = X[:num_training], y[:num_training]
@@ -39,10 +39,10 @@ ESTIMATORS = {
     "Ridge": RidgeCV(),
     "Lasso": Lasso(),
     "ElasticNet": ElasticNet(random_state=0),
-    "RandomForestRegressor": RandomForestRegressor(max_depth=4, random_state=2),
-    "Decision Tree Regressor":DecisionTreeRegressor(max_depth=5),
-    "MultiO/P GBR" :MultiOutputRegressor(GradientBoostingRegressor(n_estimators=5)),
-    "MultiO/P AdaB" :MultiOutputRegressor(AdaBoostRegressor(n_estimators=5))
+    "RandomForestRegressor": RandomForestRegressor(max_depth=10, random_state=2),
+    "Decision Tree Regressor":DecisionTreeRegressor(max_depth=10),
+    "MultiO/P GBR" :MultiOutputRegressor(GradientBoostingRegressor()),
+    "MultiO/P AdaB" :MultiOutputRegressor(AdaBoostRegressor())
 }
 
 # 9.1 Create an empty dictionary to collect prediction values
@@ -56,9 +56,17 @@ for name, estimator in ESTIMATORS.items():
     
 print('X de Prueba: ')
 print(X_test)
+
+min_name = min(y_mse, key=y_mse.get)
+min_val = y_mse[min_name]
+print('\nMEJOR RESULTADO: %s %f' % (min_name, min_val))
+
+print('\n*********************')
+print('*********************')
+
     
 for name, estimators in ESTIMATORS.items():
-    print('\n*********************')
+    print('\n*********************\n')
     print(f'{ name }  / RMSE: { y_mse[name] }\n')
     print(y_test_predict[name])
     print('*********************')
