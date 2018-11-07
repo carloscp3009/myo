@@ -64,7 +64,8 @@ def glove_worker():
 def myo_data_proc(emg, a=None):
     global MYO_COUNT, MYO_DATA
 
-    MYO_DATA.append([ time.time(), emg ])
+    MYO_DATA.append(emg + (time.time(),))
+    # MYO_DATA.append([ time.time(), emg ])
     MYO_COUNT += 1
 
 
@@ -91,9 +92,9 @@ def main(name, label, path):
     glove_thread = threading.Thread(target=glove_worker, name='glove')
 
     myo_thread.start()
-    glove_thread.start()
+    # glove_thread.start()
 
-    glove_thread.join()
+    # glove_thread.join()
     save_data_file(GLOVE_DATA, '%s/%s/%s/glove_data' % (path, name, label))
 
     myo_thread.join()
